@@ -1,0 +1,11 @@
+Package: Classify
+Type: Package
+Title: Three Classifying Methods
+Version: 0.1.1
+Author: Qing Chenglin
+Maintainer: The package maintainer <aukai-7ing@sjtu.edu.cn>
+Description: Providing Logistic Regression,K-NN,SVM function
+License: None
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2

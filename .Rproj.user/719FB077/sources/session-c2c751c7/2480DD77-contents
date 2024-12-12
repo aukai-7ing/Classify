@@ -1,0 +1,512 @@
+---
+title: "鸢尾花分类"
+author: "卿成林"
+date: "12/12/2024"
+output:
+  html_document:
+    number_sections: true
+    toc: true
+    fig_width: 7
+    fig_height: 4.5
+    theme: readable
+    highlight: tango
+---
+
+# 介绍
+
+鸢尾花(Iris)数据集是机器学习领域中最经典的数据集之一。它由三种不同品种的鸢尾花的测量数据组成：setosa(山鸢尾)、versicolor(变色鸢尾)和virginica(维吉尼亚鸢尾)，
+每个品种有4个属性列：sepal length（萼片长度）、sepal width（萼片宽度）、petal length（花瓣长度）、petal width （花瓣宽度），单位都是厘米。样本数量150个，每类50个。
+在这篇报告中，我们将先从可视化角度认识鸢尾花数据集，然后再分别用Logistic Regression（逻辑回归）、k-NN（k近邻算法）和SVM（支持向量机）
+这三种分类算法对数据集进行建模和预测，以达到分类目的；最后我们还用K-Fold(K折叠算法)对这三个分类方法进行简单分析。
+
+# 熟悉数据集
+## 载入数据
+```{r data, message=FALSE, warning=FALSE}
+library(R6)
+library(ggplot2)
+library(dplyr)
+library(caret)
+set.seed(123)
+data(iris)
+str(iris)
+summary(iris)
+```
+观察：萼片长度范围为 4.3-7.9，萼片宽度范围：2-4.4，花瓣长度范围：1-6.9，花瓣宽度：0.1-2.5。范围基本上是从 0 到 10，因此我们不必在构建模型之前进行缩放。
+
+## 绘制散点图矩阵
+```{r scatter pic, message=FALSE, warning=FALSE}
+library(GGally)
+ggpairs(data = iris, columns=1:5, aes(color=Species)) + 
+  ggtitle("散点图矩阵——Iris.Species")+
+  theme_bw() 
+```
+
+由上图看出花瓣长度和花瓣宽度有很强的相关性，所以我们为了方便建模之后只取这两列数据用以分类
+
+# 用不同的分类方法对数据集进行建模与预测
+
+## Logistic Regression
+我们选取如下的**sigmoid**函数, 用以将输入值转换到0到1之间的值
+$$ $$
+$$g(z)=\dfrac{1}{1+e^{-z}}$$
+$$ $$
+再选取假设函数$h_{\theta}(x)$如下，$x$为输入特征向量，$\theta$为参数向量，通过**sigmoid**函数将其转化为某个类别的概率。
+$$ $$
+$$h_{\theta}(x) = g(\theta^{T} x)$$
+
+$$ $$
+当$h_{\theta}(x) \geq 0.5$，我们令$y=1$; 
+当$h_{\theta}(x) < 0.5$，我们令$y=0$。
+
+使用损失函数如下：
+$$ $$
+$$J(\theta) = \dfrac{1}{m} \sum^{m}_{i=1}\{-y^{(i)} \; log(h_{\theta}(x^{(i)}))-(1-y^{(i)}) \; log(1-h_{\theta}(x^{(i)}))\}$$ 
+其中$y^{(i)}$为真实标签，$h_{\theta}(x^{(i)})$是模型预测的概率，这个函数反映了模型在分类任务中的表现，在训练过程中我们希望调整参数$\theta$来最小化它。
+$$ $$
+为了防止出现过拟合（训练集优但测试集糟糕）和欠拟合（简单模型和低方差）问题，我们给损失函数添加正则化：
+$$J(\theta) = \dfrac{1}{m} \sum^{m}_{i=1}\left[-y^{(i)} \; log(h_{\theta}(x^{(i)}))-(1-y^{(i)}) \; log(1-h_{\theta}(x^{(i)}))\right]+\dfrac{\lambda}{2m}\sum^{n}_{j=1}\theta^{2}_{j}$$
+然后采用牛顿法迭代更新$\theta$:
+
+$\textbf{Repeat}\{$ $$  \theta_{0}:= \theta_{0}-\dfrac{\alpha}{m} \sum^{m}_{i=1} (h_{\theta}(x^{(i)})-y^{(i)}) \; x_{0}^{(i)} \\ \theta_{j}:= \theta_{j}- \alpha \left[ \left( \dfrac{1}{m} \sum^{m}_{i=1} (h_{\theta}(x^{(i)})-y^{(i)}) \; x_{j}^{(i)} \right) + \dfrac{\lambda}{m} \; \theta_{j} \right] \;where\;  j \in \{1,2,...,n \} $$ $\}$
+
+在处理两个以上的类时，我们也能类似用上面的方法创造一种一对多的方法（one vs rest），它的公式是下面这个样子
+$$h_{\theta}^{(i)}(x)=P(y=i \;  | \;  x;\theta) \;\;\;\;\; (i=1,2,...,n)$$
+其中$n$为类的数量，对每一个$i$单独拿出来视作二元分类，计算完上述方程，每一个$i$都对应一个参数$\theta$，然后对测试集$x_0$再计算出使$h_{\theta}^{(i)}(x_0)$最大的$i$即可。
+最后我们得到Logistic Regression的相关代码
+<details>
+<summary>Logistic Regression</summary>
+```{r logistics regression, message=FALSE, warning=FALSE}
+# Sigmoid Function
+sigmoid <- function(z) {
+  return(1 / (1 + exp(-z)))
+}
+
+# Gradient Descent Function
+gradient_descent <- function(X, y, lmd, alpha, num_iter) {
+  
+  # 初始化theta为零
+  theta <- rep(0, ncol(X))
+  
+  for (i in 1:num_iter) {
+    z <- X %*% theta
+    h <- sigmoid(z)
+    m <- length(y)
+    # 添加正则化项
+    reg <- lmd / m * theta
+    reg[1] <- 0  # 第一个theta（截距）不正则化
+    
+    gradient <- (t(X) %*% (h - y)) / m + reg  # 矩阵乘法和平均值
+    
+    theta <- theta - alpha * gradient
+  }
+  
+  return(theta)
+}
+
+
+# Predict Function
+predict <- function(X_test, theta) {
+  z <- X_test %*% theta
+  return(sigmoid(z))
+}
+
+# Main Logistic Function
+logistic <- function(X_train, y_train, X_test, lmd = 0.1, alpha = 0.1, num_iter = 30000) {
+  
+  # 添加截距项
+  intercept_train <- matrix(1, nrow = nrow(X_train), ncol = 1)
+  X_train <- cbind(intercept_train, X_train)  # 合并截距项和特征
+  
+  intercept_test <- matrix(1, nrow = nrow(X_test), ncol = 1)
+  X_test <- cbind(intercept_test, X_test)      # 合并截距项和特征
+  
+  # 一对多分类
+  u <- sort(unique(y_train))  # 获取所有类别
+  t <- list()           # 用于存储每个类别的theta
+  
+  for (c in u) {
+    # 将标签设置为0和1
+    ynew <- as.integer(y_train == c)
+    
+    # 调用梯度下降函数
+    theta <- gradient_descent(X_train, ynew, lmd, alpha, num_iter)
+    
+    t[[as.character(c)]] <- theta  
+  }
+  
+  # 计算测试集概率
+  pred_test <- matrix(0, nrow = length(u), ncol = nrow(X_test))
+  
+  for (i in u) {
+    pred_test[which(u == i), ] <- predict(X_test, t[[as.character(i)]])
+}
+  
+  # 选择最大概率的类别
+  prediction_test <- apply(pred_test, 2, which.max) - 1
+  
+  return(prediction_test)
+}
+
+```
+<details>
+
+## k-NN
+在k-NN算法中，首先需要找到一个给定点的k个最近领域。这些领域是根据某种距离度量（如欧几里得距离、曼哈顿距离或闵可夫斯基距离）计算得出的。找到这些领域后，算法会对它们的标签进行计数，最终将给定点标记为出现次数最多的标签。
+为了实现k-NN算法，我们定义了一种常用的距离函数Euclidian Distance，以便于计算点之间的相似性。
+$$d(i,j)=\sqrt{\sum_{k=1}^n (x_{i,k}-x_{j,k})^{2}}$$
+我们计算一个点与数据集中所有点之间的距离。然后，取最近的 k 个点并计算标签数。最后，返回计数最大的标签。
+下面是K-NN算法实现的代码：
+
+<details>
+<summary>K-NN</summary>
+```{r knn, message=FALSE, warning=FALSE}
+# Distances
+
+euclidian <- function(p1, p2) {
+  dist <- 0
+  for (i in seq_along(p1)) {
+    dist <- dist + (p1[i] - p2[i])^2
+  }
+  dist <- sqrt(dist)
+  return(dist)
+}
+
+# kNN Function
+kNN <- function(X_train, y_train, X_test, k) {
+  pred <- c()
+  
+  # 调整代码类型
+    X_test <- as.matrix(X_test)
+    X_train <- as.matrix(X_train)
+
+  for (i in 1:nrow(X_test)) {
+    # 计算距离
+    newdist <- numeric(length(y_train))
+    
+      for (j in 1:length(y_train)) {
+        newdist[j] <- euclidian(X_train[j, ], X_test[i, ])
+      }
+    
+    newdist <- rbind(newdist, y_train)
+    idx <- order(newdist[1, ])
+
+    # 从小到大排序
+    newdist <- newdist[, idx]
+
+    # 标签
+    count_list <- list('0' = 0, '1' = 0, '2' = 0)
+    # 计数
+    for (j in 1:k) {
+        count_list[[as.character(newdist[2, j])]] <- count_list[[as.character(newdist[2, j])]] + 1
+    }
+
+    key_max <- names(which.max(unlist(count_list)))
+    pred <- c(pred, as.integer(key_max)) }
+  
+  return(pred)
+}
+
+```
+<details>
+
+## SVM
+在线性分类的情况下，SVM 的主要思想是找到以最佳方式分隔类的超平面或线，最接近分离超平面的样本称为支持向量。
+超平面方程可以表示为：
+$$wx - b = 0$$
+其中$w$是权重向量，$x$是特征向量，$b$是偏差。
+
+- 对于 $y = 1$, 有 $wx - b \geq 1$.
+
+- 对于 $y = -1$, 有 $wx - b \leq -1$.
+
+Goal:
+
+$$y(wx - b) \geq 1$$
+
+于是我们考虑损失函数如下：
+$$min \rightarrow C \sum \limits_{i=1}^{n} max(0, 1 - y_i (w^TX + b))$$
+
+我们用梯度下降法对它进行求解，
+梯度为:
+
+$$\frac{\partial J}{\partial w} = -\sum_{i=1}^{n} \left( (y_i (X_i^T W_i)) < 1 \right) \cdot y_i \cdot X_{i}$$
+
+故有牛顿迭代更新：
+$\textbf{Repeat}\{$ $$W_{i+1} = W_{i} + \eta \cdot \sum_{i=1}^{n} \left( (y_i (X_i^T W_i)) < 1 \right) \cdot y_i \cdot X_{i}
+$$ $\}$
+
+**对于多元分类的情形，**和Logistic Regression不同，SVM算法在一对多时准确度及其低，我们采用需要一对一（one vs one)的方法，即每两个类之间建一个SVM，每个元素对在哪个类进行投票，最终结果取票数最高的类。
+
+于是得到SVM实现的代码：
+
+<details>
+<summary>SVMn</summary>
+```{r svm, message=FALSE, warning=FALSE}
+# 梯度函数
+svm_gradient<- function(x,y,alpha=0.001,num_iter=10000){
+X<- cbind(1,x)#make design matrix
+n <- nrow(X)  #number of sample
+p <- ncol(X) #number of feature+1 (bias)
+w_intial <- rep(0,p)
+W <- matrix(w_intial ,nrow = num_iter+1,ncol = p,byrow = T) #matrix put intial guess and the procedure to do gradient descent
+for(i in 1:num_iter){
+  for(j in 1:p)
+  {
+    W[i+1,j]<- W[i,j]+alpha*sum(((y*(X%*%W[i,]))<1)*1 * y * X[,j] )  
+  }
+  }
+return(W[nrow(W),])  
+}
+
+# 测试函数
+svm <- function(X_train, y_train, X_test) {
+  y_train <-as.matrix(y_train)
+  y_train <-matrix(y_train,ncol=1)
+  X_test <-cbind(1,X_test)
+  classes <- sort(unique(y_train)) 
+  t <- list()           # 用于存储每个类别的W
+  votes <- matrix(0, nrow = nrow(X_test), ncol = length(classes)) # 投票矩阵
+  
+  # 为每一对类别训练 SVM
+  for (i in seq_along(classes)) {
+    for (j in seq(i + 1, length(classes))) {
+      class1 <- classes[i]
+      class2 <- classes[j]
+      
+      # 创建二元标签向量
+      y_k <- ifelse(y_train == class1, 1, ifelse(y_train == class2, -1, 0))
+      
+      # 提取对应的训练数据
+      X_k <- X_train[y_k != 0, ]  
+      y_k <- y_k[y_k != 0]         
+      y_k <-as.matrix(y_k)
+      W <- svm_gradient(X_k, y_k)
+      
+      # 对测试集进行预测
+      pred_test <- X_test %*% W
+      
+      # 投票机制: 将结果存入投票矩阵
+      predicted_classes <- ifelse(pred_test > 0, class1, class2)
+      for (k in seq_along(predicted_classes)) {
+        votes[k, which(classes == predicted_classes[k])] <- votes[k, which(classes == predicted_classes[k])] + 1
+      }
+    }
+  }
+
+  # 根据投票结果选择最终类别
+  prediction_test <- apply(votes, 1, which.max) - 1
+  return(prediction_test) 
+}
+
+```
+<details>
+
+# 模型测试
+
+## 训练模型
+
+现在，我们先训练上面的三个模型。
+
+将数据集拆分为训练集和测试集，写一个准确率预测函数：
+```{r data split, message=FALSE, warning=FALSE}
+
+#取120个作训练集，30个作测试集
+selected <- sample(1:150, replace = FALSE, size = 120)
+X_train <- as.matrix(iris[selected, c("Petal.Length", "Petal.Width")])
+X_test <- as.matrix(iris[-selected, c("Petal.Length", "Petal.Width")])
+y_train <- as.integer(iris[selected, "Species"])-1
+y_test <- as.integer(iris[-selected, "Species"])-1
+
+rownames(X_train) <- NULL
+rownames(X_test) <- NULL
+rownames(y_train) <- NULL
+rownames(y_test) <- NULL
+
+# 准确率计算函数
+accuracy <- function(y_true, y_pred) {
+  total_samples <- length(y_true)
+  
+  # 计算正确预测的数量
+  correct_predictions <- sum(y_true == y_pred)
+  
+  return(correct_predictions / total_samples)
+}
+```
+
+训练模型：
+
+```{r model train, message=FALSE, warning=FALSE}
+# 执行逻辑回归模型
+logistic_pred <- logistic(X_train, y_train, X_test)
+accuracy_logistic <- accuracy(y_test, logistic_pred)
+
+# 执行k-NN模型，假设k=5
+knn_predictions <- kNN(X_train, y_train, X_test, k = 5)
+accuracy_knn <- accuracy(y_test, knn_predictions)
+
+# 执行SVM模型
+predictions <- svm(X_train, y_train, X_test)
+accuracy_svm <- accuracy(y_test, predictions)
+
+cat("\n Logistic Regression Accuracy:", accuracy_logistic,
+    "\n k-NN Accuracy:", accuracy_knn,
+    "\n SVM Accuracy:", accuracy_svm, "\n")
+
+cat("\n Logistic Regression prediction:\n", logistic_pred,
+    "\n k-NN prediction:\n", knn_predictions,
+    "\n SVM prediction:\n", predictions,
+    "\n true data:\n", y_test, "\n")
+```
+
+从训练结果来看这三个方法好像没什么差别，其实是因为数据集太简单了，如果绘制出它们的决策边界，你就能看到明显的差别。
+
+## 绘图
+
+分别绘制出三个分类器对数据集的分类和决策边界。
+```{r plot, message=FALSE, warning=FALSE}
+# 创建一个网格以绘制决策边界
+x_min <- min(X_train[, 1]) - 1
+x_max <- max(X_train[, 1]) + 1
+y_min <- min(X_train[, 2]) - 1
+y_max <- max(X_train[, 2]) + 1
+grid_x1 <- seq(x_min, x_max, length.out = 100)
+grid_x2 <- seq(y_min, y_max, length.out = 100)
+grid_points <- expand.grid(grid_x1, grid_x2)
+
+# 使用逻辑回归模型进行预测
+logistic_grid_predictions <- logistic(X_train, y_train, as.matrix(grid_points))
+
+# 将预测结果添加到网格数据框中
+grid_df_logistic <- cbind(grid_points, class = logistic_grid_predictions)
+
+# 绘制逻辑回归的决策边界
+ggplot() +
+  geom_point(data = as.data.frame(X_train), aes(x = Petal.Length, y = Petal.Width, col = factor(y_train)), size = 2) +
+  geom_point(data = grid_df_logistic, aes(x = Var1, y = Var2, col = factor(class)), alpha = 0.3) +
+  labs(title = "Logistic Regression", x = "Petal Length", y = "Petal Width", color = "Species") +
+  theme_bw()
+
+# 使用k-NN对网格点进行预测
+kNN_grid_predictions <- kNN(X_train, y_train, as.matrix(grid_points), k = 5)
+
+# 将预测结果添加到网格数据框中
+grid_df_KNN <- cbind(grid_points, class = kNN_grid_predictions)
+
+# 绘制散点图和决策边界
+ggplot() +
+  geom_point(data = as.data.frame(X_train), aes(x = Petal.Length, y = Petal.Width, col = factor(y_train)), size = 2) +
+  geom_point(data = grid_df_KNN, aes(x = Var1, y = Var2, col = factor(class)), alpha = 0.3) +
+  labs(title = "k-NN", x = "Petal Length", y = "Petal Width", color = "Species") +
+  theme_bw()
+
+
+# 使用SVM对网格点进行预测
+svm_predictions_grid <- svm(X_train, y_train, as.matrix(grid_points))
+
+# 将预测结果添加到网格数据框中
+grid_df_svm <- cbind(grid_points, class = svm_predictions_grid)
+
+# 绘制SVM的决策边界
+ggplot() +
+  geom_point(data = as.data.frame(X_train), aes(x = Petal.Length, y = Petal.Width, col = factor(y_train)), size = 2) +
+  geom_point(data = grid_df_svm, aes(x = Var1, y = Var2, col = factor(class)), alpha = 0.3) +
+  labs(title = "SVM Decision Boundary", x = "Petal Length", y = "Petal Width", color = "Species") +
+  theme_bw()
+```
+
+# 基于重抽样(K-Fold)的比较
+我们选择K折交叉验证来检查模型性能。
+
+首先我定义了一个函数将数据分为K个折叠,然后再定义主函数将每个折叠作为测试，并返回每个折叠的精度。
+
+```{r KFold, message=FALSE, warning=FALSE}
+cross_validation_split <- function(dataset, folds) {
+  fold_indices <- createFolds(dataset$Species,k = folds, list = FALSE,returnTrain = FALSE)
+  
+  return(fold_indices)
+}
+
+kfoldCV <- function(dataset,f = 5, k = 5, model = "logistic") {
+
+  fold_indices <- cross_validation_split(dataset, f)
+  result <- numeric(f)  # 用于存储每个折叠的准确率
+  # 确定训练集和测试集
+  for (i in 1:f) {
+
+    testIndexes <- which(fold_indices == i)
+    testData <- dataset[testIndexes,, drop = FALSE ]
+    trainData <- dataset[-testIndexes,, drop = FALSE ]
+    
+    X_train <- as.matrix(trainData[,c("Petal.Length", "Petal.Width")])
+    X_test <- as.matrix(testData[,c("Petal.Length", "Petal.Width")])
+    y_train <- as.integer(trainData[,"Species"])
+    y_test <- as.integer(testData[,"Species"])
+
+    rownames(X_train) <- NULL
+    rownames(X_test) <- NULL
+    rownames(y_train) <- NULL
+    rownames(y_test) <- NULL
+    
+    # 应用选择的模型
+    if (model == "logistic") {
+      # 调用逻辑回归模型
+      test <- logistic(X_train, y_train, X_test)
+    } else if (model == "knn") {
+      # 调用k-NN模型
+      test <- kNN(X_train, y_train, X_test, k)
+    }else if (model == "svm") {
+      # 调用SVM模型
+      test <- svm(X_train, y_train, X_test)
+    }
+
+    # 计算准确率
+    acc <- accuracy(y_test,test)
+    result[i] <- acc
+  }
+
+  return(result)
+}
+```
+
+## 绘图
+```{r kfolds plot, message=FALSE, warning=FALSE}
+
+data(iris)
+iris_subset <- iris[, c("Petal.Length", "Petal.Width", "Species")]
+iris_subset$Species <- as.integer(factor(iris_subset$Species)) - 1
+
+# 存储每种模型的平均准确率
+results_logistic <- numeric(9)
+results_knn <- numeric(9)
+results_svm <- numeric(9)
+
+# 循环遍历折叠数从2到10
+for (f in 2:10) {
+  results_logistic[f - 1] <- mean(kfoldCV(iris_subset, f = f, model = "logistic"))
+  results_knn[f - 1] <- mean(kfoldCV(iris_subset, f = f, model = "knn"))
+  results_svm[f - 1] <- mean(kfoldCV(iris_subset, f = f, model = "svm"))
+}
+
+# 创建数据框以便绘图
+k_values <- 2:10
+accuracy_data <- data.frame(
+  kfolds = rep(k_values, each = 3),
+  accuracy = c(results_logistic, results_knn, results_svm),
+  model = rep(c("Logistic Regression", "k-NN", "SVM"), times = length(k_values))
+)
+
+# 绘制准确率与K折数的关系图
+ggplot(accuracy_data, aes(x = kfolds, y = accuracy, color = model)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Model Accuracy vs. Number of K-Folds",
+       x = "Number of K-Folds",
+       y = "Accuracy") +
+  theme_minimal()
+```
+
+从图中可以看出逻辑回归算法在6折时准确度最高；K-NN算法在5、6、7折时准确度均较高，SVM算法准确度一般，在5折时准确度偏低。
+
+# 总结
+
+本文我们对鸢尾花数据集进行了分类分析，使用了三种不同的机器学习算法：逻辑回归（Logistic Regression）、k近邻算法（k-NN）和支持向量机（SVM），并最终通过k-fold交叉检验对三个分类方法进行比较得出简单的结论；重点是本文全部重新搭建函数，以求理解算法原理；并且有一定的可视化工作，让结果清晰明了。
