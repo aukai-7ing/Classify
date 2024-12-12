@@ -7,16 +7,7 @@
 #'@return return y_pred 预测集
 #'@example
 #'KNN(X_train,y_train,X_test)
-# Distances
 
-euclidian <- function(p1, p2) {
-  dist <- 0
-  for (i in seq_along(p1)) {
-    dist <- dist + (p1[i] - p2[i])^2
-  }
-  dist <- sqrt(dist)
-  return(dist)
-}
 
 # kNN Function
 kNN <- function(X_train, y_train, X_test, k) {
@@ -51,4 +42,14 @@ kNN <- function(X_train, y_train, X_test, k) {
     pred <- c(pred, as.integer(key_max)) }
 
   return(pred)
+}
+# Distances
+
+euclidian <- function(p1, p2) {
+  dist <- 0
+  for (i in seq_along(p1)) {
+    dist <- dist + (p1[i] - p2[i])^2
+  }
+  dist <- sqrt(dist)
+  return(dist)
 }

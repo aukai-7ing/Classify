@@ -1,14 +1,14 @@
 {
-    "id": "F6B36FEA",
+    "id": "DAAF94CA",
     "path": "E:/study/专业选修/统计软件与算法/code/chapter3/Classify/man/KNN.Rd",
     "project_path": "man/KNN.Rd",
     "type": "r_doc",
-    "hash": "7867255",
+    "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1733985064134.0,
+    "created": 1733984960639.0,
     "source_on_save": false,
-    "relative_order": 9,
+    "relative_order": 7,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
@@ -16,13 +16,11 @@
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1733985093,
+    "lastKnownWriteTime": 1733985810,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1733985093,
-    "read_only": true,
-    "read_only_alternatives": [
-        "R/KNN.R"
-    ]
+    "last_content_update": 1733985810,
+    "read_only": false,
+    "read_only_alternatives": []
 }

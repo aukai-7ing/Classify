@@ -9,39 +9,6 @@
 #'@return return y_pred 预测集
 #'@examples
 #'logistic(X_train,y_train,X_test)
-# Sigmoid Function
-sigmoid <- function(z) {
-  return(1 / (1 + exp(-z)))
-}
-
-# Gradient Descent Function
-gradient_descent <- function(X, y, lmd, alpha, num_iter) {
-
-  # 初始化theta为零
-  theta <- rep(0, ncol(X))
-
-  for (i in 1:num_iter) {
-    z <- X %*% theta
-    h <- sigmoid(z)
-    m <- length(y)
-    # 添加正则化项
-    reg <- lmd / m * theta
-    reg[1] <- 0  # 第一个theta（截距）不正则化
-
-    gradient <- (t(X) %*% (h - y)) / m + reg  # 矩阵乘法和平均值
-
-    theta <- theta - alpha * gradient
-  }
-
-  return(theta)
-}
-
-
-# Predict Function
-predict <- function(X_test, theta) {
-  z <- X_test %*% theta
-  return(sigmoid(z))
-}
 
 # Main Logistic Function
 logistic <- function(X_train, y_train, X_test, lmd = 0.1, alpha = 0.1, num_iter = 30000) {
@@ -79,3 +46,37 @@ logistic <- function(X_train, y_train, X_test, lmd = 0.1, alpha = 0.1, num_iter 
 
   return(prediction_test)
 }
+# Sigmoid Function
+sigmoid <- function(z) {
+  return(1 / (1 + exp(-z)))
+}
+
+# Gradient Descent Function
+gradient_descent <- function(X, y, lmd, alpha, num_iter) {
+
+  # 初始化theta为零
+  theta <- rep(0, ncol(X))
+
+  for (i in 1:num_iter) {
+    z <- X %*% theta
+    h <- sigmoid(z)
+    m <- length(y)
+    # 添加正则化项
+    reg <- lmd / m * theta
+    reg[1] <- 0  # 第一个theta（截距）不正则化
+
+    gradient <- (t(X) %*% (h - y)) / m + reg  # 矩阵乘法和平均值
+
+    theta <- theta - alpha * gradient
+  }
+
+  return(theta)
+}
+
+
+# Predict Function
+predict <- function(X_test, theta) {
+  z <- X_test %*% theta
+  return(sigmoid(z))
+}
+

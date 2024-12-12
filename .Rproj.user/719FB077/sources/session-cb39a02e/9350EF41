@@ -3,9 +3,9 @@
     "path": "E:/study/专业选修/统计软件与算法/code/chapter3/Classify/man/logistic.Rd",
     "project_path": "man/logistic.Rd",
     "type": "r_doc",
-    "hash": "35917088",
+    "hash": "0",
     "contents": "",
-    "dirty": true,
+    "dirty": false,
     "created": 1733985066856.0,
     "source_on_save": false,
     "relative_order": 10,
@@ -16,13 +16,11 @@
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1733984794,
+    "lastKnownWriteTime": 1733985810,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1733984794,
-    "read_only": true,
-    "read_only_alternatives": [
-        "R/logistic.R"
-    ]
+    "last_content_update": 1733985810,
+    "read_only": false,
+    "read_only_alternatives": []
 }

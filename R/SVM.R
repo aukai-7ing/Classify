@@ -6,21 +6,7 @@
 #'@return return y_pred 预测集
 #'@example
 #'svm(X_train,y_train,X_test)
-# 梯度函数
-svm_gradient<- function(x,y,alpha=0.001,num_iter=10000){
-  X<- cbind(1,x)#make design matrix
-  n <- nrow(X)  #number of sample
-  p <- ncol(X) #number of feature+1 (bias)
-  w_intial <- rep(0,p)
-  W <- matrix(w_intial ,nrow = num_iter+1,ncol = p,byrow = T) #matrix put intial guess and the procedure to do gradient descent
-  for(i in 1:num_iter){
-    for(j in 1:p)
-    {
-      W[i+1,j]<- W[i,j]+alpha*sum(((y*(X%*%W[i,]))<1)*1 * y * X[,j] )
-    }
-  }
-  return(W[nrow(W),])
-}
+
 
 # 测试函数
 svm <- function(X_train, y_train, X_test) {
@@ -60,4 +46,20 @@ svm <- function(X_train, y_train, X_test) {
   # 根据投票结果选择最终类别
   prediction_test <- apply(votes, 1, which.max) - 1
   return(prediction_test)
+}
+
+# 梯度函数
+svm_gradient<- function(x,y,alpha=0.001,num_iter=10000){
+  X<- cbind(1,x)#make design matrix
+  n <- nrow(X)  #number of sample
+  p <- ncol(X) #number of feature+1 (bias)
+  w_intial <- rep(0,p)
+  W <- matrix(w_intial ,nrow = num_iter+1,ncol = p,byrow = T) #matrix put intial guess and the procedure to do gradient descent
+  for(i in 1:num_iter){
+    for(j in 1:p)
+    {
+      W[i+1,j]<- W[i,j]+alpha*sum(((y*(X%*%W[i,]))<1)*1 * y * X[,j] )
+    }
+  }
+  return(W[nrow(W),])
 }
